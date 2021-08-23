@@ -9,6 +9,8 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+
 import java.util.ArrayList;
 
 public class StatusAdapter extends RecyclerView.Adapter<StatusViewHolder> {
@@ -18,7 +20,6 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusViewHolder> {
     Context context;
     ArrayList<StatusModel> filesList;
     StatusClickListener statusClickListener;
-    StatusViewHolder statusViewHolder;
 
 
     public StatusAdapter(Context context, ArrayList<StatusModel> filesList, StatusClickListener statusClickListener) {
@@ -31,13 +32,25 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusViewHolder> {
     @Override
     public StatusViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.item_status, null, false);
-        statusViewHolder = new StatusViewHolder(view);
-        return statusViewHolder;
+        return new StatusViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull StatusViewHolder holder, int position) {
-        statusClickListener.onStatusClicked(position, statusViewHolder);
+        StatusModel statusModel = filesList.get(position);
+        if (statusModel.getUri().toString().endsWith(".mp4")) {
+            holder.getPlay().setVisibility(View.VISIBLE);
+        } else {
+            holder.getPlay().setVisibility(View.INVISIBLE);
+        }
+        Glide.with(context).load(statusModel.getUri()).into(holder.getMainStatus());
+
+        holder.getMainStatus().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                statusClickListener.onStatusClicked(holder);
+            }
+        });
     }
 
     @Override
@@ -46,7 +59,6 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusViewHolder> {
     }
 
     public void updateStatusData(ArrayList<StatusModel> filesList) {
-        this.filesList.clear();
         this.filesList = filesList;
         notifyDataSetChanged();
     }

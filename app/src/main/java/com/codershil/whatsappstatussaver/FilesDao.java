@@ -21,24 +21,22 @@ public class FilesDao {
         String targetPath = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.FOLDER_NAME + "Media/.Statuses";
         File targetDirectory = new File(targetPath);
         File[] files = targetDirectory.listFiles();
-        if (files.length > 0) {
-            for (int i = 0; i < files.length; i++) {
-                File file = files[i];
-                statusModel = new StatusModel();
-                statusModel.setUri(Uri.fromFile(file));
-                statusModel.setPath(file.getAbsolutePath());
-                statusModel.setFilename(file.getName());
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            statusModel = new StatusModel();
+            statusModel.setUri(Uri.fromFile(file));
+            statusModel.setPath(file.getAbsolutePath());
+            statusModel.setFilename(file.getName());
 
-                if (!statusModel.getUri().toString().endsWith(".nomedia")) {
-                    filesList.add(statusModel);
-                }
+            if (!statusModel.getUri().toString().endsWith(".nomedia")) {
+                filesList.add(statusModel);
             }
         }
         return filesList;
     }
 
     // method for downloading status
-    public static void downloadStatus(Context context, File filePath, File destinationPath,String fileName,String destinationPathString) {
+    public static void downloadStatus(Context context, File filePath, File destinationPath, String fileName, String destinationPathString) {
 
         try {
             org.apache.commons.io.FileUtils.copyFileToDirectory(filePath, destinationPath);
@@ -52,6 +50,7 @@ public class FilesDao {
                     public void onMediaScannerConnected() {
 
                     }
+
                     @Override
                     public void onScanCompleted(String path, Uri uri) {
 

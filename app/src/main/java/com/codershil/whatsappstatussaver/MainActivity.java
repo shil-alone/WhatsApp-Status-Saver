@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
+import java.io.File;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements StatusClickListener {
@@ -34,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements StatusClickListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        initializeLayout();
         checkPermission();
     }
 
@@ -43,10 +43,18 @@ public class MainActivity extends AppCompatActivity implements StatusClickListen
         recyclerView = findViewById(R.id.recyclerView);
         swipeRefreshLayout = findViewById(R.id.swipeRefresh);
 
-        recyclerView.setHasFixedSize(true);
-        StaggeredGridLayoutManager staggeredGridLayoutManager = new StaggeredGridLayoutManager(3, StaggeredGridLayoutManager.VERTICAL);
-        recyclerView.setLayoutManager(staggeredGridLayoutManager);
-        adapter = new StatusAdapter(MainActivity.this, FilesDao.getStatusFilesList(), this);
+        // checking if statuses directory exists or not
+        String statusDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.FOLDER_NAME + "Media/.Statuses";
+        File file = new File(statusDirectory);
+        if (!file.isDirectory()) {
+            Toast.makeText(MainActivity.this, "statuses not found", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // setting up recyclerview
+        filesList = FilesDao.getStatusFilesList();
+        adapter = new StatusAdapter(MainActivity.this, filesList, this);
+        recyclerView.setLayoutManager(new StaggeredGridLayoutManager(3, StaggeredGridLayoutManager.VERTICAL));
         recyclerView.setAdapter(adapter);
 
         // adding listener to refresh layout
@@ -71,55 +79,42 @@ public class MainActivity extends AppCompatActivity implements StatusClickListen
 
     // method for checking storage permissions
     private void checkPermission() {
-        if (Build.VERSION.SDK_INT > 23) {
+        if (Build.VERSION.SDK_INT >= 23) {
             if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                filesList = FilesDao.getStatusFilesList();
-                adapter.updateStatusData(filesList);
+                initializeLayout();
             } else {
+                Toast.makeText(MainActivity.this, "please allow given permission", Toast.LENGTH_SHORT).show();
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, requestCode);
             }
 
         } else {
-            Toast.makeText(this, "no need to ask permission", Toast.LENGTH_SHORT).show();
-            filesList = FilesDao.getStatusFilesList();
-            adapter.updateStatusData(filesList);
+            // no need to ask permission in case of api level less than 23
+            initializeLayout();
         }
     }
 
 
     // method for handling clicks on status inside recyclerview
     @Override
-    public void onStatusClicked(int position, StatusViewHolder statusViewHolder) {
-        StatusModel statusModel = filesList.get(position);
+    public void onStatusClicked(StatusViewHolder statusViewHolder) {
+        StatusModel statusModel = filesList.get(statusViewHolder.getAdapterPosition());
         if (statusModel.getUri().toString().endsWith(".mp4")) {
-            statusViewHolder.getPlay().setVisibility(View.VISIBLE);
+            String destPath = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.SAVE_FOLDER_NAME;
+            Intent intent = new Intent(getApplicationContext(), VideoActivity.class);
+            intent.putExtra("DEST_PATH_VIDEO", destPath);
+            intent.putExtra("FILE_VIDEO", statusModel.getPath());
+            intent.putExtra("FILENAME_VIDEO", statusModel.getFilename());
+            intent.putExtra("URI_VIDEO", statusModel.getUri().toString());
+            startActivity(intent);
         } else {
-            statusViewHolder.getPlay().setVisibility(View.INVISIBLE);
+            String destPath = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.SAVE_FOLDER_NAME;
+            Intent intent = new Intent(getApplicationContext(), PictureActivity.class);
+            intent.putExtra("DEST_PATH", destPath);
+            intent.putExtra("FILE", statusModel.getPath());
+            intent.putExtra("FILENAME", statusModel.getFilename());
+            intent.putExtra("URI", statusModel.getUri().toString());
+            startActivity(intent);
         }
-        Glide.with(getApplicationContext()).load(statusModel.getUri()).into(statusViewHolder.getMainStatus());
 
-        statusViewHolder.getMainStatus().setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (statusModel.getUri().toString().endsWith(".mp4")) {
-                    String destPath = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.SAVE_FOLDER_NAME;
-                    Intent intent = new Intent(getApplicationContext(), VideoActivity.class);
-                    intent.putExtra("DEST_PATH_VIDEO", destPath);
-                    intent.putExtra("FILE_VIDEO", statusModel.getPath());
-                    intent.putExtra("FILENAME_VIDEO", statusModel.getFilename());
-                    intent.putExtra("URI_VIDEO", statusModel.getUri().toString());
-                    startActivity(intent);
-                } else {
-                    String destPath = Environment.getExternalStorageDirectory().getAbsolutePath() + Constants.SAVE_FOLDER_NAME;
-                    Intent intent = new Intent(getApplicationContext(), PictureActivity.class);
-                    intent.putExtra("DEST_PATH", destPath);
-                    intent.putExtra("FILE", statusModel.getPath());
-                    intent.putExtra("FILENAME", statusModel.getFilename());
-                    intent.putExtra("URI", statusModel.getUri().toString());
-                    startActivity(intent);
-                }
-
-            }
-        });
     }
 }
